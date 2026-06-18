@@ -1,0 +1,22 @@
+# YOLOv8 Training Configuration
+# Used by train.py and predict.py
+
+# Dataset
+dataset_root: "./data/fire_dataset"
+
+# Classes
+class_names: ["fire"]
+
+# Training hyper-parameters
+model_name: "yolov8n.pt"
+img_size: 640
+epochs: 50
+batch_size: 16
+device: "cuda"
+workers: 4
+lr: 0.001
+patience: 10
+
+# Inference
+conf_threshold: 0.5
+iou_threshold: 0.45
