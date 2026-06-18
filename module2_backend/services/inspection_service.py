@@ -112,6 +112,39 @@ class InspectionService:
 
         return records, total
 
+    def update_record(
+        self,
+        record_id: int,
+        inspection_date: Optional[date] = None,
+        team_id: Optional[int] = None,
+        area_id: Optional[int] = None,
+        shift: Optional[str] = None,
+        remark: Optional[str] = None,
+    ) -> Optional[InspectionRecord]:
+        """Update an existing inspection record. Returns None if not found."""
+        record = self.get_record(record_id)
+        if record is None:
+            return None
+
+        if inspection_date is not None:
+            record.inspection_date = inspection_date
+        if team_id is not None:
+            self.validate_team_exists(team_id)
+            record.team_id = team_id
+        if area_id is not None:
+            self.validate_area_exists(area_id)
+            record.area_id = area_id
+        if shift is not None:
+            record.shift = shift
+        if remark is not None:
+            record.remark = remark
+
+        record.updated_at = datetime.now(timezone.utc)
+        self.session.add(record)
+        self.session.commit()
+        self.session.refresh(record)
+        return record
+
     # ── Delete ──────────────────────────────────────────────────
 
     def delete_record(self, record_id: int) -> bool:

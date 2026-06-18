@@ -1,7 +1,6 @@
 """Tests for the mine safety inspection API."""
 
 import os
-import atexit
 import tempfile
 from io import BytesIO
 from pathlib import Path
@@ -17,9 +16,10 @@ from module2_backend.models.database import Team, Area
 
 # ── Test Database ────────────────────────────────────────────────
 
-# Use tmp_path via pytest to avoid file leaks
-TEST_DB_FILE = tempfile.mktemp(suffix=".db")
-TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
+# Use mkstemp (safe alternative to deprecated mktemp)
+_db_fd, TEST_DB_PATH = tempfile.mkstemp(suffix=".db")
+os.close(_db_fd)  # close file descriptor, SQLModel will open it independently
+TEST_DB_URL = f"sqlite:///{TEST_DB_PATH}"
 
 engine = create_engine(TEST_DB_URL)
 
@@ -32,15 +32,16 @@ def override_get_session():
 app.dependency_overrides[get_session] = override_get_session
 
 # Register cleanup: delete test DB at process exit (best-effort)
+import atexit
 @atexit.register
 def _cleanup_test_db():
     import gc
-    gc.collect()  # release any remaining references
+    gc.collect()
     try:
-        if os.path.exists(TEST_DB_FILE):
-            os.unlink(TEST_DB_FILE)
+        if os.path.exists(TEST_DB_PATH):
+            os.unlink(TEST_DB_PATH)
     except (PermissionError, OSError):
-        pass  # best-effort cleanup
+        pass
 
 
 # ── Fixtures ─────────────────────────────────────────────────────
@@ -249,6 +250,56 @@ class TestDeleteInspection:
     def test_delete_not_found(self, client):
         """DELETE on non-existent ID should return 404."""
         response = client.delete("/api/v1/inspections/9999")
+        assert response.status_code == 404
+
+
+class TestUpdateInspection:
+    def test_update_success(self, client, seed_data):
+        """PUT should update record fields."""
+        # Create
+        fake_image = BytesIO(b"data")
+        fake_image.name = "t.jpg"
+        create_resp = client.post(
+            "/api/v1/inspections/",
+            data={"inspection_date": "2026-06-18", "team_id": 1, "area_id": 1, "shift": "白班"},
+            files={"photo": ("t.jpg", fake_image, "image/jpeg")},
+        )
+        record_id = create_resp.json()["id"]
+
+        # Update
+        response = client.put(
+            f"/api/v1/inspections/{record_id}",
+            json={"shift": "夜班", "remark": "已整改"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["shift"] == "夜班"
+        assert data["remark"] == "已整改"
+        assert data["team_id"] == 1  # unchanged
+
+    def test_update_not_found(self, client):
+        """PUT on non-existent ID should return 404."""
+        response = client.put(
+            "/api/v1/inspections/9999",
+            json={"shift": "夜班"},
+        )
+        assert response.status_code == 404
+
+    def test_update_nonexistent_team(self, client, seed_data):
+        """PUT with invalid team_id should return 404."""
+        fake_image = BytesIO(b"data")
+        fake_image.name = "t.jpg"
+        create_resp = client.post(
+            "/api/v1/inspections/",
+            data={"inspection_date": "2026-06-18", "team_id": 1, "area_id": 1, "shift": "白班"},
+            files={"photo": ("t.jpg", fake_image, "image/jpeg")},
+        )
+        record_id = create_resp.json()["id"]
+
+        response = client.put(
+            f"/api/v1/inspections/{record_id}",
+            json={"team_id": 999},
+        )
         assert response.status_code == 404
 
 

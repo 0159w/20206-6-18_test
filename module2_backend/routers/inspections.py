@@ -14,6 +14,7 @@ from module2_backend.schemas.inspection import (
     InspectionRecordOut,
     PaginatedResponse,
     InspectionQuery,
+    InspectionUpdate,
 )
 from module2_backend.services.inspection_service import InspectionService
 
@@ -119,6 +120,26 @@ def get_inspection(
 ):
     """Get a single inspection record by ID."""
     record = service.get_record(record_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
+
+
+@router.put("/{record_id}", response_model=InspectionRecordOut)
+def update_inspection(
+    record_id: int,
+    data: InspectionUpdate,
+    service: InspectionService = Depends(get_service),
+):
+    """Update an inspection record's metadata (partial update)."""
+    record = service.update_record(
+        record_id=record_id,
+        inspection_date=data.inspection_date,
+        team_id=data.team_id,
+        area_id=data.area_id,
+        shift=data.shift,
+        remark=data.remark,
+    )
     if record is None:
         raise HTTPException(status_code=404, detail="Record not found")
     return record

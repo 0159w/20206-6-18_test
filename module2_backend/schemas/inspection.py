@@ -17,6 +17,15 @@ class InspectionQuery(BaseModel):
     area_id: Optional[int] = Field(default=None, description="按采区筛选")
 
 
+class InspectionUpdate(BaseModel):
+    """更新安全检查记录的请求体"""
+    inspection_date: Optional[date] = Field(default=None, description="检查日期 (YYYY-MM-DD)")
+    team_id: Optional[int] = Field(default=None, description="施工队编号")
+    area_id: Optional[int] = Field(default=None, description="采区编号")
+    shift: Optional[str] = Field(default=None, max_length=50, description="班组")
+    remark: Optional[str] = Field(default=None, max_length=500, description="备注")
+
+
 # ── Response Schemas ─────────────────────────────────────────────
 
 class InspectionRecordOut(BaseModel):
