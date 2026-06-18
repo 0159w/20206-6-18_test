@@ -1,6 +1,6 @@
 """Database models for the mine safety inspection system."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlmodel import SQLModel, Field
@@ -12,7 +12,7 @@ class Team(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(max_length=100, description="施工队名称")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Area(SQLModel, table=True):
@@ -21,7 +21,7 @@ class Area(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(max_length=100, description="采区名称")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class InspectionRecord(SQLModel, table=True):
@@ -38,8 +38,8 @@ class InspectionRecord(SQLModel, table=True):
     confidence: Optional[float] = Field(default=None, description="模型推理置信度")
 
     # 管理字段
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="记录创建时间")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="记录更新时间")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="记录创建时间")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="记录更新时间")
     inference_time_ms: Optional[float] = Field(default=None, description="模型推理耗时(ms)")
     inspector_ip: Optional[str] = Field(default=None, max_length=50, description="提交者IP")
     remark: Optional[str] = Field(default=None, max_length=500, description="备注")

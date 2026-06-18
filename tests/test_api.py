@@ -1,6 +1,7 @@
 """Tests for the mine safety inspection API."""
 
 import os
+import atexit
 import tempfile
 from io import BytesIO
 from pathlib import Path
@@ -11,13 +12,14 @@ from sqlmodel import SQLModel, create_engine, Session
 
 from module2_backend.app import app
 from module2_backend.core.database import get_session
-from module2_backend.models.database import InspectionRecord, Team, Area
+from module2_backend.models.database import Team, Area
 
 
 # ── Test Database ────────────────────────────────────────────────
 
-TEST_DB = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-TEST_DB_URL = f"sqlite:///{TEST_DB.name}"
+# Use tmp_path via pytest to avoid file leaks
+TEST_DB_FILE = tempfile.mktemp(suffix=".db")
+TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
 
 engine = create_engine(TEST_DB_URL)
 
@@ -28,6 +30,17 @@ def override_get_session():
 
 
 app.dependency_overrides[get_session] = override_get_session
+
+# Register cleanup: delete test DB at process exit (best-effort)
+@atexit.register
+def _cleanup_test_db():
+    import gc
+    gc.collect()  # release any remaining references
+    try:
+        if os.path.exists(TEST_DB_FILE):
+            os.unlink(TEST_DB_FILE)
+    except (PermissionError, OSError):
+        pass  # best-effort cleanup
 
 
 # ── Fixtures ─────────────────────────────────────────────────────
@@ -61,7 +74,6 @@ def seed_data():
 class TestCreateInspection:
     def test_create_success(self, client, seed_data):
         """POST /api/v1/inspections/ should create a record."""
-        # Create a dummy image file
         fake_image = BytesIO(b"fake-image-data")
         fake_image.name = "test.jpg"
 
@@ -99,6 +111,34 @@ class TestCreateInspection:
         )
         assert response.status_code == 400
 
+    def test_create_nonexistent_team(self, client, seed_data):
+        """Non-existent team_id should return 404."""
+        response = client.post(
+            "/api/v1/inspections/",
+            data={
+                "inspection_date": "2026-06-18",
+                "team_id": 999,  # does not exist
+                "area_id": 1,
+                "shift": "白班",
+            },
+            files={"photo": ("test.jpg", BytesIO(b"data"), "image/jpeg")},
+        )
+        assert response.status_code == 404
+
+    def test_create_nonexistent_area(self, client, seed_data):
+        """Non-existent area_id should return 404."""
+        response = client.post(
+            "/api/v1/inspections/",
+            data={
+                "inspection_date": "2026-06-18",
+                "team_id": 1,
+                "area_id": 999,  # does not exist
+                "shift": "白班",
+            },
+            files={"photo": ("test.jpg", BytesIO(b"data"), "image/jpeg")},
+        )
+        assert response.status_code == 404
+
 
 class TestListInspections:
     def test_list_empty(self, client):
@@ -112,7 +152,6 @@ class TestListInspections:
 
     def test_list_with_data(self, client, seed_data):
         """Should return paginated results."""
-        # Create a record first
         fake_image = BytesIO(b"fake-image-data")
         fake_image.name = "test.jpg"
         client.post(
@@ -145,6 +184,11 @@ class TestListInspections:
         response = client.get("/api/v1/inspections/?team_id=1")
         assert response.status_code == 200
         assert response.json()["total"] == 1
+
+    def test_page_size_validation(self, client):
+        """page_size > 100 should be rejected by schema validation."""
+        response = client.get("/api/v1/inspections/?page_size=200")
+        assert response.status_code == 422  # validation error
 
 
 class TestGetInspection:
@@ -192,3 +236,22 @@ class TestDeleteInspection:
         """DELETE on non-existent ID should return 404."""
         response = client.delete("/api/v1/inspections/9999")
         assert response.status_code == 404
+
+
+# ── Module-1 Import Test ─────────────────────────────────────────
+
+class TestModule1YOLO:
+    def test_module1_config_import(self):
+        """module1_yolo config should be importable."""
+        from module1_yolo import config
+        assert config.CLASS_NAMES == ["fire"]
+        assert config.MODEL_NAME == "yolov8n.pt"
+        assert config.IMG_SIZE == 640
+        assert config.EPOCHS == 50
+        assert config.CONF_THRESHOLD == 0.5
+
+    def test_data_converter_import(self):
+        """data_converter functions should be importable."""
+        from module1_yolo.data_converter import convert_coco_to_yolo, create_data_yaml
+        assert callable(convert_coco_to_yolo)
+        assert callable(create_data_yaml)

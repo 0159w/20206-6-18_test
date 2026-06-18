@@ -5,9 +5,8 @@ from pathlib import Path
 # Database
 DATABASE_URL = "sqlite:///./mine_inspection.db"
 
-# Upload directory for photos
+# Upload directory for photos (directory is created in lifespan)
 UPLOAD_DIR = Path("./uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
 
 # YOLO model weights path
 YOLO_WEIGHTS_PATH = "module1_yolo/runs/train/weights/best.pt"

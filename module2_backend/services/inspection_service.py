@@ -3,12 +3,13 @@
 No direct DB Session manipulation in API routes.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import List, Optional, Tuple
 
+from fastapi import HTTPException
 from sqlmodel import Session, select, func
 
-from module2_backend.models.database import InspectionRecord
+from module2_backend.models.database import InspectionRecord, Team, Area
 
 
 class InspectionService:
@@ -16,6 +17,20 @@ class InspectionService:
 
     def __init__(self, session: Session):
         self.session = session
+
+    # ── Validation ───────────────────────────────────────────────
+
+    def validate_team_exists(self, team_id: int) -> None:
+        """Raise 404 if team_id does not exist."""
+        team = self.session.get(Team, team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail=f"施工队 (team_id={team_id}) 不存在")
+
+    def validate_area_exists(self, area_id: int) -> None:
+        """Raise 404 if area_id does not exist."""
+        area = self.session.get(Area, area_id)
+        if area is None:
+            raise HTTPException(status_code=404, detail=f"采区 (area_id={area_id}) 不存在")
 
     # ── Create ──────────────────────────────────────────────────
 
@@ -33,6 +48,11 @@ class InspectionService:
         remark: Optional[str] = None,
     ) -> InspectionRecord:
         """Create a new inspection record."""
+        # Validate foreign keys
+        self.validate_team_exists(team_id)
+        self.validate_area_exists(area_id)
+
+        now = datetime.now(timezone.utc)
         record = InspectionRecord(
             inspection_date=inspection_date,
             team_id=team_id,
@@ -44,6 +64,8 @@ class InspectionService:
             inference_time_ms=inference_time_ms,
             inspector_ip=inspector_ip,
             remark=remark,
+            created_at=now,
+            updated_at=now,
         )
         self.session.add(record)
         self.session.commit()
@@ -68,18 +90,22 @@ class InspectionService:
 
         Returns (records_list, total_count).
         """
-        query = select(InspectionRecord)
-
+        base_conditions = []
         if team_id is not None:
-            query = query.where(InspectionRecord.team_id == team_id)
+            base_conditions.append(InspectionRecord.team_id == team_id)
         if area_id is not None:
-            query = query.where(InspectionRecord.area_id == area_id)
+            base_conditions.append(InspectionRecord.area_id == area_id)
 
-        # Total count
-        count_query = select(func.count()).select_from(query.subquery())
+        # Total count — direct count with filters, no subquery nesting
+        count_query = select(func.count()).select_from(InspectionRecord)
+        if base_conditions:
+            count_query = count_query.where(*base_conditions)
         total = self.session.exec(count_query).one()
 
         # Paginated fetch
+        query = select(InspectionRecord)
+        if base_conditions:
+            query = query.where(*base_conditions)
         query = query.order_by(InspectionRecord.created_at.desc())
         query = query.offset((page - 1) * page_size).limit(page_size)
         records = list(self.session.exec(query).all())

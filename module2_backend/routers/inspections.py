@@ -4,16 +4,16 @@ import uuid
 import math
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException, Request, Query
 from sqlmodel import Session
 
 from module2_backend.core.config import UPLOAD_DIR
 from module2_backend.core.database import get_session
 from module2_backend.ml.detector import predict_safety
 from module2_backend.schemas.inspection import (
-    InspectionCreate,
     InspectionRecordOut,
     PaginatedResponse,
+    InspectionQuery,
 )
 from module2_backend.services.inspection_service import InspectionService
 
@@ -67,6 +67,7 @@ async def create_inspection(
         raise HTTPException(status_code=500, detail=f"Model inference failed: {e}")
 
     # 4. Store in DB via Service layer
+    #    Service layer validates team_id/area_id foreign keys
     record = service.create_record(
         inspection_date=insp_date,
         team_id=team_id,
@@ -84,25 +85,22 @@ async def create_inspection(
 
 @router.get("/", response_model=PaginatedResponse)
 def list_inspections(
-    page: int = 1,
-    page_size: int = 20,
-    team_id: int = None,
-    area_id: int = None,
+    query: InspectionQuery = Depends(),
     service: InspectionService = Depends(get_service),
 ):
     """Query inspection records with pagination and optional filters."""
     records, total = service.list_records(
-        page=page,
-        page_size=page_size,
-        team_id=team_id,
-        area_id=area_id,
+        page=query.page,
+        page_size=query.page_size,
+        team_id=query.team_id,
+        area_id=query.area_id,
     )
     return PaginatedResponse(
         items=[InspectionRecordOut.model_validate(r) for r in records],
         total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+        page=query.page,
+        page_size=query.page_size,
+        total_pages=math.ceil(total / query.page_size) if total > 0 else 0,
     )
 
 

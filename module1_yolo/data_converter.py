@@ -42,8 +42,14 @@ def convert_coco_to_yolo(
     with open(coco_json_path, "r") as f:
         coco = json.load(f)
 
-    # Build image_id → filename mapping
-    img_map = {img["id"]: img["file_name"] for img in coco["images"]}
+    # Build image_id → {filename, width, height} mapping
+    img_map = {}
+    for img in coco["images"]:
+        img_map[img["id"]] = {
+            "filename": img["file_name"],
+            "width": img.get("width", 640),
+            "height": img.get("height", 640),
+        }
 
     # Build category_id → class index mapping (0-based)
     cat_map = {cat["id"]: idx for idx, cat in enumerate(coco["categories"])}
@@ -62,9 +68,10 @@ def convert_coco_to_yolo(
     img_src_dir = Path(image_dir)
 
     for img_id, anns in anns_by_img.items():
-        filename = img_map[img_id]
-        img_width = coco["images"][0].get("width", 640)
-        img_height = coco["images"][0].get("height", 640)
+        img_info = img_map[img_id]
+        filename = img_info["filename"]
+        img_width = img_info["width"]
+        img_height = img_info["height"]
 
         # Copy image
         src = img_src_dir / filename

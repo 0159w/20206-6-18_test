@@ -38,12 +38,18 @@ def predict_safety(image_path: str) -> Tuple[bool, float, float]:
     # model = YOLO(YOLO_WEIGHTS_PATH)
     # results = model(image_path)
     # detections = results[0].boxes
-    # fire_detected = any(
-    #     int(cls) == 0 and conf > 0.5
-    #     for cls, conf in zip(detections.cls, detections.conf)
-    # )
-    # is_safe = not fire_detected
-    # confidence = float(detections.conf.max()) if len(detections) > 0 else 0.0
+    # if detections is not None and len(detections.cls) > 0:
+    #     cls_tensor = detections.cls.int().tolist()
+    #     conf_tensor = detections.conf.tolist()
+    #     fire_detected = any(
+    #         cls_id == 0 and conf_val > 0.5
+    #         for cls_id, conf_val in zip(cls_tensor, conf_tensor)
+    #     )
+    #     is_safe = not fire_detected
+    #     confidence = max(conf_tensor) if conf_tensor else 0.0
+    # else:
+    #     is_safe = True
+    #     confidence = 0.0
 
     # ── Placeholder for coding test ──
     is_safe = True       # Simulate: no fire detected
