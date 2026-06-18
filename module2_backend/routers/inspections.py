@@ -4,7 +4,7 @@ import uuid
 import math
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException, Request, Query
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException, Request
 from sqlmodel import Session
 
 from module2_backend.core.config import UPLOAD_DIR
@@ -75,7 +75,7 @@ async def create_inspection(
         filepath.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail=f"Model inference failed: {e}")
 
-    # 4. Store in DB via Service layer
+    # 5. Store in DB via Service layer
     #    Service layer validates team_id/area_id foreign keys
     record = service.create_record(
         inspection_date=insp_date,

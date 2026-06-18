@@ -51,7 +51,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Serve uploaded photos
+# Serve uploaded photos — ensure directory exists before mounting
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # Register routers
