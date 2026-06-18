@@ -16,8 +16,7 @@ VOC XML or COCO JSON format) to standard YOLO detection format:
 Usage:
     python module1_yolo/data_converter.py --input /path/to/kaggle_fire --output ./data/fire_dataset
 
-Note: The Kaggle fire dataset (https://www.kaggle.com/datasets/atulyakumar98/fire-dataset)
-      provides annotations in COCO JSON format (annotations.json).
+Note: The Kaggle fire dataset provides annotations in COCO JSON format (annotations.json).
 """
 
 import argparse

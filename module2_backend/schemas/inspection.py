@@ -8,14 +8,6 @@ from pydantic import BaseModel, Field
 
 # ── Request Schemas ──────────────────────────────────────────────
 
-class InspectionCreate(BaseModel):
-    """创建安全检查记录的请求体（不含照片 — 照片通过 UploadFile 上传）"""
-    inspection_date: date = Field(..., description="检查日期 (YYYY-MM-DD)")
-    team_id: int = Field(..., description="施工队编号")
-    area_id: int = Field(..., description="采区编号")
-    shift: str = Field(..., max_length=50, description="班组")
-    remark: Optional[str] = Field(default=None, max_length=500, description="备注")
-
 
 class InspectionQuery(BaseModel):
     """分页查询参数"""
