@@ -118,7 +118,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Check that annotation files exist
-    import glob
     ann_dir = os.path.join(args.input, "annotations")
     if not os.path.isdir(ann_dir):
         print(f"⚠️ Annotations directory not found: {ann_dir}")

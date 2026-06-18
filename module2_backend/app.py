@@ -32,9 +32,6 @@ def _seed_initial_data():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create tables and seed data on startup."""
-    # Ensure upload directory exists
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
     # Create tables
     create_all_tables()
 
