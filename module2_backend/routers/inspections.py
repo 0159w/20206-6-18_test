@@ -51,14 +51,22 @@ async def create_inspection(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
-    # 2. Save photo
+    # 2. Validate photo format
+    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/bmp"}
+    if photo.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的图片格式: {photo.content_type}。允许的类型: {', '.join(allowed_types)}",
+        )
+
+    # 3. Save photo
     ext = Path(photo.filename).suffix if photo.filename else ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = UPLOAD_DIR / filename
     content = await photo.read()
     filepath.write_bytes(content)
 
-    # 3. Run model inference
+    # 4. Run model inference
     try:
         is_safe, confidence, inference_ms = predict_safety(str(filepath))
     except Exception as e:

@@ -139,6 +139,20 @@ class TestCreateInspection:
         )
         assert response.status_code == 404
 
+    def test_create_invalid_image_format(self, client, seed_data):
+        """Non-image content_type should return 400."""
+        response = client.post(
+            "/api/v1/inspections/",
+            data={
+                "inspection_date": "2026-06-18",
+                "team_id": 1,
+                "area_id": 1,
+                "shift": "白班",
+            },
+            files={"photo": ("test.pdf", BytesIO(b"not-an-image"), "application/pdf")},
+        )
+        assert response.status_code == 400
+
 
 class TestListInspections:
     def test_list_empty(self, client):

@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -117,9 +118,35 @@ if __name__ == "__main__":
     parser.add_argument("--classes", nargs="+", default=["fire"], help="Class names")
     args = parser.parse_args()
 
+    # Check that annotation files exist
+    import glob
+    ann_dir = os.path.join(args.input, "annotations")
+    if not os.path.isdir(ann_dir):
+        print(f"⚠️ Annotations directory not found: {ann_dir}")
+        print(f"   Please ensure your dataset has the standard COCO structure:")
+        print(f"   {args.input}/annotations/instances_train.json")
+        print(f"   {args.input}/annotations/instances_val.json")
+        sys.exit(1)
+
+    train_json = os.path.join(ann_dir, "instances_train.json")
+    val_json = os.path.join(ann_dir, "instances_val.json")
+
+    for path, label in [(train_json, "train"), (val_json, "val")]:
+        if not os.path.exists(path):
+            # Try alternate naming
+            alt = os.path.join(args.input, f"annotations_{label}.json")
+            if os.path.exists(alt):
+                if label == "train":
+                    train_json = alt
+                else:
+                    val_json = alt
+            else:
+                print(f"⚠️ Annotation file not found: {path}")
+                print(f"   Available files in annotations/: {os.listdir(ann_dir) if os.path.isdir(ann_dir) else 'N/A'}")
+
     # Convert train split
     convert_coco_to_yolo(
-        coco_json_path=os.path.join(args.input, "annotations", "instances_train.json"),
+        coco_json_path=train_json,
         image_dir=os.path.join(args.input, "train"),
         output_dir=args.output,
         split="train",
@@ -127,7 +154,7 @@ if __name__ == "__main__":
 
     # Convert val split
     convert_coco_to_yolo(
-        coco_json_path=os.path.join(args.input, "annotations", "instances_val.json"),
+        coco_json_path=val_json,
         image_dir=os.path.join(args.input, "val"),
         output_dir=args.output,
         split="val",
